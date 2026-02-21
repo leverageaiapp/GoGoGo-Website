@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoGoGo — Terminal in Your Pocket</title>
+    <meta name="description" content="Forward your terminal to your mobile device with one command. Powered by Cloudflare Tunnel.">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231a1a1a'/%3E%3Cpath d='M7 10l5 6-5 6' stroke='%2322c55e' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M14 10l5 6-5 6' stroke='%2322c55e' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M21 10l5 6-5 6' stroke='%2322c55e' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0a0a0a;
+            --bg-card: #111;
+            --text: #ededed;
+            --text-muted: #888;
+            --accent: #22c55e;
+            --accent-dim: rgba(34, 197, 94, 0.15);
+            --border: #222;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+        /* Nav */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: rgba(10, 10, 10, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+            padding: 16px 0;
+        }
+        nav .container {
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .nav-brand {
+            font-size: 20px; font-weight: 700; color: var(--text);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-brand svg { width: 28px; height: 28px; }
+        .nav-links { display: flex; gap: 24px; align-items: center; }
+        .nav-links a { color: var(--text-muted); font-size: 14px; }
+        .nav-links a:hover { color: var(--text); text-decoration: none; }
+        .gh-link {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+        }
+        .gh-link:hover { border-color: var(--text-muted); }
+
+        /* Hero */
+        .hero {
+            padding: 160px 0 100px;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: clamp(36px, 6vw, 64px);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            margin-bottom: 20px;
+        }
+        .hero h1 .accent { color: var(--accent); }
+        .hero p {
+            font-size: 18px;
+            color: var(--text-muted);
+            max-width: 520px;
+            margin: 0 auto 40px;
+        }
+        .install-box {
+            display: inline-flex;
+            align-items: center;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 15px;
+            gap: 12px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .install-box:hover { border-color: var(--accent); }
+        .install-box .prompt { color: var(--accent); user-select: none; }
+        .install-box .cmd { color: var(--text); }
+        .install-box .copy-icon {
+            color: var(--text-muted);
+            width: 16px; height: 16px;
+            flex-shrink: 0;
+        }
+        .install-box .copy-icon:hover { color: var(--text); }
+
+        /* Terminal demo */
+        .terminal-demo {
+            max-width: 640px;
+            margin: 48px auto 0;
+            background: #111;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .terminal-bar {
+            display: flex; align-items: center; gap: 8px;
+            padding: 12px 16px;
+            background: #1a1a1a;
+            border-bottom: 1px solid var(--border);
+        }
+        .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .terminal-dot.red { background: #ff5f57; }
+        .terminal-dot.yellow { background: #febc2e; }
+        .terminal-dot.green { background: #28c840; }
+        .terminal-body {
+            padding: 16px 20px;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+            min-height: 200px;
+        }
+        .terminal-body .line { white-space: pre; }
+        .terminal-body .prompt-char { color: var(--accent); }
+        .terminal-body .muted { color: #666; }
+        .terminal-body .info { color: #3b82f6; }
+        .terminal-body .highlight { color: var(--accent); }
+
+        /* Features */
+        .features {
+            padding: 80px 0;
+        }
+        .features h2 {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 48px;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 24px;
+            transition: border-color 0.2s;
+        }
+        .feature-card:hover { border-color: var(--accent); }
+        .feature-icon {
+            width: 40px; height: 40px;
+            background: var(--accent-dim);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+        .feature-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+        .feature-card p { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+
+        /* How It Works */
+        .how-it-works {
+            padding: 80px 0;
+            border-top: 1px solid var(--border);
+        }
+        .how-it-works h2 {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 48px;
+        }
+        .steps {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .step {
+            display: flex; gap: 20px; align-items: flex-start;
+        }
+        .step-num {
+            width: 36px; height: 36px;
+            background: var(--accent-dim);
+            color: var(--accent);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 14px;
+            flex-shrink: 0;
+        }
+        .step-content h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .step-content p { font-size: 14px; color: var(--text-muted); }
+
+        /* CTA */
+        .cta {
+            padding: 80px 0;
+            text-align: center;
+            border-top: 1px solid var(--border);
+        }
+        .cta h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        .cta p {
+            color: var(--text-muted);
+            margin-bottom: 32px;
+        }
+        .cta-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--accent);
+            color: #000;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            transition: opacity 0.2s;
+        }
+        .cta-btn:hover { opacity: 0.9; text-decoration: none; }
+
+        /* Footer */
+        footer {
+            padding: 32px 0;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        footer a { color: var(--text-muted); }
+        footer a:hover { color: var(--text); }
+
+        @media (max-width: 640px) {
+            .hero { padding: 120px 0 60px; }
+            .nav-links a:not(.gh-link) { display: none; }
+            .terminal-demo { margin: 32px 16px 0; }
+            .features-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <div class="nav-brand">
+                <svg viewBox="0 0 32 32" fill="none">
+                    <rect width="32" height="32" rx="6" fill="#1a1a1a"/>
+                    <path d="M7 10l5 6-5 6" stroke="#22c55e" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M14 10l5 6-5 6" stroke="#22c55e" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 10l5 6-5 6" stroke="#22c55e" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                GoGoGo
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="https://github.com/leverageaiapp/GoGoGo" class="gh-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <h1>Terminal in<br>Your <span class="accent">Pocket</span></h1>
+            <p>Forward any terminal session to your phone with a single command. Powered by Cloudflare Tunnel. No port forwarding needed.</p>
+            <div class="install-box" onclick="navigator.clipboard.writeText('npm install -g @leverageaiapps/gogogo')">
+                <span class="prompt">$</span>
+                <span class="cmd">npm install -g @leverageaiapps/gogogo</span>
+                <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+            </div>
+
+            <div class="terminal-demo">
+                <div class="terminal-bar">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot yellow"></span>
+                    <span class="terminal-dot green"></span>
+                </div>
+                <div class="terminal-body">
+                    <div class="line"><span class="prompt-char">$</span> gogogo start claude</div>
+                    <div class="line"></div>
+                    <div class="line">  <span class="highlight">Finding available port...</span></div>
+                    <div class="line">  Using port: 54321</div>
+                    <div class="line">  Starting local server...</div>
+                    <div class="line">  Creating tunnel...</div>
+                    <div class="line"></div>
+                    <div class="line">  <span class="info">Scan this QR code with your phone:</span></div>
+                    <div class="line"></div>
+                    <div class="line muted">  ██████████████████████</div>
+                    <div class="line muted">  ██ ▄▄▄▄▄ █ █▄█ ██ ▄▄▄▄▄ ██</div>
+                    <div class="line muted">  ██ █   █ █▀▀█▀ ██ █   █ ██</div>
+                    <div class="line muted">  ██████████████████████</div>
+                    <div class="line"></div>
+                    <div class="line">  Started.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <div class="container">
+            <h2>Features</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">&#9889;</div>
+                    <h3>One-Command Setup</h3>
+                    <p>Run <code>gogogo start</code> and you're live. No configuration files, no accounts, no port forwarding.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">&#128241;</div>
+                    <h3>Mobile-First UI</h3>
+                    <p>Touch scrolling with inertia, dual input modes (textarea + native keyboard), and responsive layout.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">&#128274;</div>
+                    <h3>Secure by Default</h3>
+                    <p>128-bit cryptographic token auth. httpOnly cookies. WebSocket verification. CSP and HSTS headers.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">&#127760;</div>
+                    <h3>Cloudflare Tunnel</h3>
+                    <p>Uses Cloudflare Quick Tunnel for instant, secure HTTPS access. No account or configuration needed.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">&#128260;</div>
+                    <h3>Reconnection Support</h3>
+                    <p>Output buffer with sequence tracking. Reconnecting clients get a delta sync — no lost output.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">&#128248;</div>
+                    <h3>Image Paste</h3>
+                    <p>Paste images from your clipboard. They're uploaded and the file path is inserted into your terminal.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <h2>How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <h3>Install & Run</h3>
+                        <p>Install globally via npm, then run <code>gogogo start</code> (or <code>gogogo start claude</code> for a specific command).</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <h3>Tunnel Created</h3>
+                        <p>GoGoGo starts a local server with a PTY and creates a Cloudflare Quick Tunnel for secure HTTPS access.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                        <h3>Scan QR Code</h3>
+                        <p>A QR code with your authenticated URL appears in the terminal. Scan it with your phone's camera.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <div class="step-content">
+                        <h3>Code from Your Pocket</h3>
+                        <p>Your terminal is now live on your phone. Type commands, scroll through output, paste images — all in real-time.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="container">
+            <h2>Ready to go?</h2>
+            <p>Install GoGoGo and access your terminal from anywhere.</p>
+            <a href="https://github.com/leverageaiapp/GoGoGo" class="cta-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                View on GitHub
+            </a>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>MIT License &middot; <a href="https://github.com/leverageaiapp/GoGoGo">GoGoGo</a> by <a href="https://github.com/leverageaiapp">LeverageAI Apps</a></p>
+        </div>
+    </footer>
+</body>
+</html>
